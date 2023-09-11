@@ -131,9 +131,12 @@ type Sub struct {
 	initialized bool
 	closed      bool
 
-	pb            *Pubsub
-	lastTimestamp uint32
-	eventCallback func(*flvtag.FlvTag) error
+	pb                *Pubsub
+	eventCallback     func(*flvtag.FlvTag) error
+	firstTimestamp    uint32
+	lastTimestamp     uint32
+	curTimestamp      uint32
+	lastTimestampDiff uint32
 }
 
 func (s *Sub) Run() {
@@ -170,10 +173,25 @@ func (s *Sub) onEvent(flv *flvtag.FlvTag) error {
 		return nil
 	}
 
-	if flv.Timestamp != 0 && s.lastTimestamp == 0 {
-		s.lastTimestamp = flv.Timestamp
+	// We need to re-timestamp the data so that the subscribers can achieve a
+	// smooth transition across reconnections. Since the first timestamp is
+	// always 0 for FLV, we can use this to determine wraparound scenarios
+	if flv.Timestamp != 0 && s.firstTimestamp == 0 {
+		// This is the start of the stream, so initialise
+		s.firstTimestamp = flv.Timestamp
+		s.curTimestamp = 0
+		s.lastTimestampDiff = 1
+	} else {
+		// Tag timestamps should be monotonically increasing, so we use a running timestamp
+		// In case of wraparound, use the previous diff for the tag
+		// TODO: Check for any AV sync issues
+		if flv.Timestamp > s.lastTimestamp {
+			s.lastTimestampDiff = flv.Timestamp - s.lastTimestamp
+		}
+		s.curTimestamp += s.lastTimestampDiff
 	}
-	flv.Timestamp -= s.lastTimestamp
+	s.lastTimestamp = flv.Timestamp
+	flv.Timestamp = s.curTimestamp
 
 	return s.eventCallback(flv)
 }
