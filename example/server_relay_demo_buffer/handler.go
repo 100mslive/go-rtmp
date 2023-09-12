@@ -56,9 +56,19 @@ func (h *Handler) OnPublish(_ *rtmp.StreamContext, timestamp uint32, cmd *rtmpms
 		return errors.New("PublishingName is empty")
 	}
 
-	pubsub, err := h.relayService.NewPubsub(cmd.PublishingName)
+	// Reuse pubsub if there is already one
+	// Ideally, we want to reuse pubsub if there is a reconnection from the publisher
+	// within the reconnection window
+	pubsub, err := h.relayService.GetPubsub(cmd.PublishingName)
 	if err != nil {
-		return errors.Wrap(err, "Failed to create pubsub")
+		pubsub, err = h.relayService.NewPubsub(cmd.PublishingName)
+		if err != nil {
+			return errors.Wrap(err, "Failed to create pubsub")
+		} else {
+			log.Printf("OnPublish: Created a new PubSub: %v", pubsub)
+		}
+	} else {
+		log.Printf("OnPublish: Reusing PubSub %v", pubsub)
 	}
 
 	pub := pubsub.Pub()
@@ -100,17 +110,19 @@ func (h *Handler) OnSetDataFrame(timestamp uint32, data *rtmpmsg.NetStreamSetDat
 
 	log.Printf("SetDataFrame: Script = %#v", script)
 
-	_ = h.pub.Publish(&flvtag.FlvTag{
-		TagType:   flvtag.TagTypeScriptData,
-		Timestamp: timestamp,
-		Data:      &script,
-	})
+	// TODO: Since subscriber is not currently attempting direct playback,
+	// we can safely ignore DataFrames for now. We'll need to add validations
+	// for codec parameters across reconnections
+	// _ = h.pub.Publish(&flvtag.FlvTag{
+	// 	TagType:   flvtag.TagTypeScriptData,
+	// 	Timestamp: timestamp,
+	// 	Data:      &script,
+	// })
 
 	return nil
 }
 
 func (h *Handler) OnAudio(timestamp uint32, payload io.Reader) error {
-	log.Printf("OnAudio")
 	var audio flvtag.AudioData
 	if err := flvtag.DecodeAudioData(payload, &audio); err != nil {
 		return err
@@ -132,8 +144,6 @@ func (h *Handler) OnAudio(timestamp uint32, payload io.Reader) error {
 }
 
 func (h *Handler) OnVideo(timestamp uint32, payload io.Reader) error {
-	log.Printf("OnVideo")
-
 	var video flvtag.VideoData
 	if err := flvtag.DecodeVideoData(payload, &video); err != nil {
 		return err
@@ -158,11 +168,14 @@ func (h *Handler) OnVideo(timestamp uint32, payload io.Reader) error {
 func (h *Handler) OnClose() {
 	log.Printf("OnClose")
 
-	if h.pub != nil {
-		_ = h.pub.Close()
-	}
+	// TODO: Cleanup things that actually need to be closed
+	// For reconnection to work seamlessly, we need context of previous sessions
+	// So, don't close the pubsub (we are anyway only registering/deregistering here)
+	// if h.pub != nil {
+	// 	_ = h.pub.Close()
+	// }
 
-	if h.sub != nil {
-		_ = h.sub.Close()
-	}
+	// if h.sub != nil {
+	// 	_ = h.sub.Close()
+	// }
 }
