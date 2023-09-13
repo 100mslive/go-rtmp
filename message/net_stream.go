@@ -7,6 +7,8 @@
 
 package message
 
+import "errors"
+
 type NetStreamPublish struct {
 	CommandObject  interface{}
 	PublishingName string
@@ -44,7 +46,7 @@ func (t *NetStreamPlay) FromArgs(args ...interface{}) error {
 }
 
 func (t *NetStreamPlay) ToArgs(ty EncodingType) ([]interface{}, error) {
-	panic("Not implemented")
+	return nil, errors.New("not implemented")
 }
 
 type NetStreamOnStatusLevel string
@@ -80,7 +82,7 @@ type NetStreamOnStatusInfoObject struct {
 }
 
 func (t *NetStreamOnStatus) FromArgs(args ...interface{}) error {
-	panic("Not implemented")
+	return errors.New("not implemented")
 }
 
 func (t *NetStreamOnStatus) ToArgs(ty EncodingType) ([]interface{}, error) {

@@ -9,6 +9,7 @@ package rtmp
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -152,7 +153,7 @@ func decodeChunkMessageHeader(r io.Reader, fmt byte, buf []byte, mh *chunkMessag
 		// DO NOTHING
 
 	default:
-		panic("Unexpected fmt")
+		return errors.New("unexpected fmt")
 	}
 
 	return nil
@@ -233,6 +234,6 @@ func encodeChunkMessageHeader(w io.Writer, fmt byte, mh *chunkMessageHeader) err
 		return nil
 
 	default:
-		panic("Unexpected fmt")
+		return errors.New("unexpected fmt")
 	}
 }
