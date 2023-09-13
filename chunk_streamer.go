@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/yutopp/go-rtmp/message"
+	"github.com/100mslive/go-rtmp/message"
 )
 
 const ctrlMsgChunkStreamID = 2
@@ -238,14 +238,14 @@ func (cs *ChunkStreamer) readChunk() (*ChunkStreamReader, error) {
 		// DO NOTHING
 
 	default:
-		panic("unsupported chunk") // TODO: fix
+		return nil, errors.New("unsupported chunk") // TODO: fix
 	}
 
 	//cs.logger.Debugf("(READ) MessageLength = %d, Current = %d", reader.messageLength, reader.buf.Len())
 
 	expectLen := int(reader.messageLength) - reader.buf.Len()
 	if expectLen <= 0 {
-		panic("invalid state") // TODO fix
+		return nil, errors.New("invalid state") // TODO fix
 	}
 
 	if uint32(expectLen) > cs.peerState.chunkSize {
