@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -105,6 +106,16 @@ func (srv *Server) getDoneChLocked() chan struct{} {
 }
 
 func (srv *Server) handleConn(conn net.Conn) {
+	defer func() {
+		if r := recover(); r != nil {
+			errTmp, ok := r.(error)
+			if !ok {
+				errTmp = errors.Errorf("%+v", r)
+			}
+			log.Printf("Panic: %+v", errors.WithStack(errTmp))
+		}
+	}()
+
 	userConn, connConfig := srv.config.OnConnect(conn)
 
 	c := newConn(userConn, connConfig)
