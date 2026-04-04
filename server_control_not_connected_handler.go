@@ -57,7 +57,7 @@ func (h *serverControlNotConnectedHandler) onCommand(
 			if err != nil {
 				result := h.newConnectErrorResult()
 
-				l.Infof("Connect(Error): ResponseBody = %#v, Err = %+v", result, err)
+				l.Infof("Connect(Error): ResponseBody = %#v, Err = %v", result, err)
 				if err1 := h.sh.stream.ReplyConnect(chunkStreamID, timestamp, result); err1 != nil {
 					err = errors.Wrapf(err, "Failed to reply response: Err = %+v", err1)
 				}
